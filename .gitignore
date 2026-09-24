@@ -1,0 +1,19 @@
+backend/storage/
+node_modules/
+dist/
+.angular/
+out-tsc/
+.sites-runtime/
+*.log
+.env
+qa/
+.local/
+**/.env
+**/.env.*
+!**/.env.example
+
+# Фотографии локальных визиток не входят в исходный код.
+/admin-web/public/assets/avatar.jpg
+/admin-web/public/assets/fon.jpg
+/public-web/public/assets/avatar.jpg
+/public-web/public/assets/fon.jpg

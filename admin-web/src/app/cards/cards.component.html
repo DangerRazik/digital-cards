@@ -1,0 +1,165 @@
+<section aria-label="Управление визитками">
+  @if (!editingCard() && !formOpen()) {
+    <div class="section-header">
+      <h2>Мои визитки</h2>
+      <button type="button" class="primary" (click)="openForm()" [disabled]="loading() || openingEditor() || deleting() || changingPublication() || !!listError()">
+        <lucide-icon [img]="icons.Plus" [size]="18" /> Создать визитку
+      </button>
+    </div>
+  }
+
+  @if (notice()) {
+    <p class="success" role="status">{{ notice() }}</p>
+  }
+
+  @if (formOpen()) {
+    <app-card-editor
+      (saved)="onDraftSaved($event)"
+      (cancelled)="closeForm()"
+      (sessionExpired)="onEditorSessionExpired()"
+    />
+  }
+
+  @if (editorError()) {
+    <p class="error" role="alert">{{ editorError() }}</p>
+  }
+  @if (openingEditor()) {
+    <p class="status" role="status">Открываем черновик…</p>
+  }
+  @if (editingCard(); as detail) {
+    <app-card-editor
+      [card]="detail"
+      (saved)="onDraftSaved($event)"
+      (cancelled)="editingCard.set(null)"
+      (sessionExpired)="onEditorSessionExpired()"
+    />
+  }
+
+  @if (loading()) {
+    <p class="status" role="status">Загружаем визитки…</p>
+  } @else if (listError()) {
+    <div class="status">
+      <p class="error" role="alert">{{ listError() }}</p>
+      <button type="button" class="secondary" (click)="loadCards()">Попробовать снова</button>
+    </div>
+  } @else if (cards().length === 0 && !formOpen()) {
+    <div class="empty-state">
+      <span class="empty-icon"><lucide-icon [img]="icons.ContactRound" [size]="34" /></span>
+      <h3>Ваша первая визитка</h3>
+      <p>Создайте черновик — он будет доступен только вам.</p>
+    </div>
+  } @else if (!editingCard() && !formOpen()) {
+    <div class="card-list">
+      @for (card of cards(); track card.id) {
+        <article class="card-item">
+          <div class="card-heading">
+            <h3>{{ card.displayName }}</h3>
+            <span class="badge" [class.published]="card.status === 'published'">{{ statusLabels[card.status] }}</span>
+          </div>
+          @if (card.hasUnpublishedChanges) {
+            <p class="unpublished-notice" role="status">
+              Есть неопубликованные изменения. Посетители видят предыдущую версию.
+            </p>
+          }
+          <dl>
+            <div><dt>Должность</dt><dd>{{ card.jobTitle || 'Не указана' }}</dd></div>
+            <div><dt>Организация</dt><dd>{{ card.organization || 'Не указана' }}</dd></div>
+            <div class="full-width">
+              <dt>Публичный URL</dt>
+              <dd>
+                @if (card.status === 'published') {
+                  <a [href]="card.publicUrl" target="_blank" rel="noopener noreferrer">{{ card.publicUrl }}</a>
+                } @else {
+                  <span>{{ card.publicUrl }}</span>
+                  <span class="hint url-hint">Недоступен до публикации</span>
+                }
+              </dd>
+            </div>
+          </dl>
+          <div class="card-actions">
+            @if (card.status !== 'published' || card.hasUnpublishedChanges) {
+              <button type="button" class="primary" (click)="requestPublication(card, 'publish')" [disabled]="openingEditor() || formOpen() || deleting() || changingPublication()">
+                @if (card.status === 'published') {
+                  Опубликовать изменения
+                } @else {
+                  Опубликовать
+                }
+              </button>
+            }
+            <button type="button" class="secondary" (click)="editCard(card)" [disabled]="openingEditor() || formOpen() || deleting() || changingPublication()">
+              <lucide-icon [img]="icons.Pencil" [size]="16" /> Редактировать
+            </button>
+            @if (card.status === 'published') {
+              <button type="button" class="secondary" (click)="qrDialog.open(card)" [disabled]="openingEditor() || deleting() || changingPublication()">
+                <lucide-icon [img]="icons.QrCode" [size]="18" aria-hidden="true" /> QR-код
+              </button>
+              <button type="button" class="secondary" (click)="requestPublication(card, 'unpublish')" [disabled]="openingEditor() || formOpen() || deleting() || changingPublication()">
+                Снять с публикации
+              </button>
+            }
+            @if (card.status !== 'published') {
+              <button type="button" class="secondary danger delete-button" (click)="requestDeletion(card)" [disabled]="openingEditor() || deleting() || changingPublication()" title="Удалить визитку" [attr.aria-label]="'Удалить визитку ' + card.displayName">
+                <lucide-icon [img]="icons.Trash2" [size]="18" aria-hidden="true" />
+              </button>
+            }
+          </div>
+          @if (publicationCandidate()?.id === card.id) {
+            <div class="publication-confirmation" role="group" [attr.aria-labelledby]="'publication-title-' + card.id" [attr.aria-busy]="changingPublication()">
+              <p [id]="'publication-title-' + card.id">
+                @if (publicationAction() === 'publish') {
+                  Опубликовать сохранённый черновик «{{ card.displayName }}»?
+                } @else {
+                  Снять визитку «{{ card.displayName }}» с публикации?
+                }
+              </p>
+              <p class="hint">
+                @if (publicationAction() === 'publish') {
+                  Включённые данные станут доступны всем по ссылке. Перед публикацией сохраните изменения и проверьте предпросмотр.
+                } @else {
+                  Публичная ссылка перестанет показывать визитку. Данные останутся в личном кабинете.
+                }
+              </p>
+              @if (publicationError()) {
+                <p class="error" role="alert">{{ publicationError() }}</p>
+              }
+              <div class="publication-actions">
+                <button type="button" class="primary" (click)="confirmPublication()" [disabled]="changingPublication()">
+                  @if (changingPublication()) {
+                    Сохраняем…
+                  } @else {
+                    Подтвердить
+                  }
+                </button>
+                <button type="button" class="secondary" (click)="cancelPublication()" [disabled]="changingPublication()">Отмена</button>
+              </div>
+            </div>
+          }
+          @if (card.status !== 'published') {
+            @if (deleteCandidate()?.id === card.id) {
+              <div class="delete-confirmation" role="group" [attr.aria-labelledby]="'delete-title-' + card.id" [attr.aria-busy]="deleting()">
+                <p [id]="'delete-title-' + card.id">Удалить черновик «{{ card.displayName }}»?</p>
+                <p class="hint">Вся визитка будет удалена. Восстановить её через личный кабинет не получится.</p>
+                @if (deleteError()) {
+                  <p class="error" role="alert">{{ deleteError() }}</p>
+                }
+                <div class="delete-actions">
+                  <button type="button" class="secondary" (click)="cancelDeletion()" [disabled]="deleting()">Отмена</button>
+                  <button type="button" class="secondary danger" (click)="confirmDeletion()" [disabled]="deleting()">
+                    @if (deleting()) {
+                      Удаляем…
+                    } @else {
+                      Удалить навсегда
+                    }
+                  </button>
+                </div>
+              </div>
+            }
+          }
+          <p class="updated">Изменено {{ card.updatedAt | date:'dd.MM.yyyy, HH:mm' }}</p>
+        </article>
+      }
+    </div>
+  }
+</section>
+
+<app-card-qr #qrDialog />

@@ -1,0 +1,173 @@
+<main class="page">
+  @if (card(); as card) {
+    <article class="business-card" aria-labelledby="person-name">
+      @if (card.blocks.header) {
+        <header class="cover" [class.cover-empty]="!visible(card.background) || coverFailed()">
+          @if (visible(card.background) && !coverFailed()) {
+            <img class="cover-image" [src]="card.background.value" alt="" fetchpriority="high" (error)="coverFailed.set(true)">
+          }
+        </header>
+      }
+
+      <div class="card-content">
+        <section class="profile" [class.has-cover]="card.blocks.header">
+          @if (card.blocks.avatar) {
+            <div class="avatar">
+              @if (avatar() && !imageFailed()) {
+                <img [src]="avatar()" [alt]="card.displayName" (error)="imageFailed.set(true)">
+              } @else { <span aria-hidden="true">{{ initials() }}</span> }
+            </div>
+          }
+          <h1 id="person-name">{{ card.displayName }}</h1>
+          @if (visible(card.jobTitle)) { <p class="job-title">{{ card.jobTitle.value }}</p> }
+          @if (visible(card.organization)) { <p class="organization">{{ card.organization.value }}</p> }
+          @if (visible(card.description)) { <p class="description">{{ card.description.value }}</p> }
+        </section>
+
+        @if (card.blocks.saveContact) {
+          <button class="save-button" type="button" (click)="saveContact()">
+            <lucide-icon [img]="icons.ContactRound" [size]="23" aria-hidden="true" />
+            Сохранить контакт
+          </button>
+          <p class="save-status" role="status" aria-live="polite">{{ saveMessage() }}</p>
+        }
+
+        @if (card.blocks.phones && (visible(card.mobile) || visible(card.workPhone))) {
+          <section class="phone-grid" aria-label="Телефоны">
+            @if (visible(card.mobile)) {
+              <a class="surface phone-card" [href]="phoneHref(card.mobile.value)" [attr.aria-label]="'Позвонить на мобильный: ' + card.mobile.value">
+                <span class="icon-circle"><lucide-icon [img]="icons.Smartphone" [size]="23" aria-hidden="true" /></span>
+                <span class="contact-copy"><span class="label">Мобильный телефон</span><span class="phone-value">{{ card.mobile.value }}</span></span>
+                <lucide-icon class="chevron" [img]="icons.ChevronRight" [size]="17" aria-hidden="true" />
+              </a>
+            }
+            @if (visible(card.workPhone)) {
+              <a class="surface phone-card" [href]="phoneHref(card.workPhone.value)" [attr.aria-label]="'Позвонить на рабочий: ' + card.workPhone.value">
+                <span class="icon-circle"><lucide-icon [img]="icons.Phone" [size]="22" aria-hidden="true" /></span>
+                <span class="contact-copy"><span class="label">Рабочий телефон</span><span class="phone-value">{{ card.workPhone.value }}</span></span>
+                <lucide-icon class="chevron" [img]="icons.ChevronRight" [size]="17" aria-hidden="true" />
+              </a>
+            }
+          </section>
+        }
+
+        @if (messengers().length) {
+          <nav class="messengers" aria-label="Мессенджеры">
+            @for (messenger of messengers(); track messenger.key) {
+              <a class="surface messenger" [href]="messenger.url" target="_blank" rel="noopener noreferrer" [attr.aria-label]="messenger.label + ' — открыть в новой вкладке'">
+                <span [class]="'messenger-icon ' + messenger.key">
+                  @if (messenger.key === 'express') {
+                    <lucide-icon [img]="icons.MessageCircle" [size]="38" [strokeWidth]="1.8" aria-hidden="true" />
+                    <span class="express-letters" aria-hidden="true">eX</span>
+                  } @else {
+                    <img [src]="'/assets/' + messenger.key + '.svg'" alt="" width="38" height="38">
+                  }
+                </span>
+                <span>{{ messenger.label }}</span>
+              </a>
+            }
+          </nav>
+        }
+
+        <div class="details">
+          @if (card.blocks.email && visible(card.email)) {
+            <a class="surface detail-row" [href]="emailHref(card.email.value)">
+              <span class="icon-tile"><lucide-icon [img]="icons.Mail" [size]="26" aria-hidden="true" /></span>
+              <span class="contact-copy"><span class="label">Электронная почта</span><span>{{ card.email.value }}</span></span>
+              <lucide-icon class="chevron" [img]="icons.ChevronRight" [size]="19" aria-hidden="true" />
+            </a>
+          }
+          @if (card.blocks.website && website()) {
+            <a class="surface detail-row" [href]="website()" target="_blank" rel="noopener noreferrer">
+              <span class="icon-tile"><lucide-icon [img]="icons.Globe" [size]="28" aria-hidden="true" /></span>
+              <span class="contact-copy"><span class="label">Сайт</span><span>{{ websiteLabel() }}</span></span>
+              <lucide-icon class="chevron" [img]="icons.ChevronRight" [size]="19" aria-hidden="true" />
+            </a>
+          }
+          @if (card.blocks.address && visible(card.address)) {
+            <section class="surface address-card" aria-label="Адрес">
+              <a class="detail-row" [href]="mapLink()" target="_blank" rel="noopener noreferrer">
+                <span class="icon-tile pin"><lucide-icon [img]="icons.MapPin" [size]="29" aria-hidden="true" /></span>
+                <span class="contact-copy"><span class="label">Адрес</span><span>{{ card.address.value }}</span></span>
+                <lucide-icon class="chevron" [img]="icons.ChevronRight" [size]="19" aria-hidden="true" />
+              </a>
+              @if (card.blocks.map) {
+                <div class="map-frame">
+                  <iframe [src]="mapEmbed()" title="Расположение офиса на Яндекс Картах" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+                </div>
+                <a class="map-link" [href]="mapLink()" target="_blank" rel="noopener noreferrer">
+                  Открыть на карте <lucide-icon [img]="icons.ExternalLink" [size]="16" aria-hidden="true" />
+                </a>
+              }
+            </section>
+          }
+          @if (companyVisible()) {
+            <section class="company-section" aria-labelledby="company-heading">
+              <div class="surface company-card">
+                <span class="icon-tile"><lucide-icon [img]="icons.Building2" [size]="27" aria-hidden="true" /></span>
+                <div>
+                  <h2 id="company-heading">О компании</h2>
+                  @if (visible(card.organization)) {
+                    <p>{{ card.organization.value }}</p>
+                  }
+                  @if (visible(card.companyDescription)) {
+                    <p>{{ card.companyDescription.value }}</p>
+                  }
+                </div>
+              </div>
+              @if (visible(card.companyPhone)) {
+                <a class="surface detail-row" [href]="phoneHref(card.companyPhone.value)">
+                  <span class="icon-tile"><lucide-icon [img]="icons.Phone" [size]="26" aria-hidden="true" /></span>
+                  <span class="contact-copy"><span class="label">Телефон компании</span><span>{{ card.companyPhone.value }}</span></span>
+                </a>
+              }
+              @if (visible(card.companyEmail)) {
+                <a class="surface detail-row" [href]="emailHref(card.companyEmail.value)">
+                  <span class="icon-tile"><lucide-icon [img]="icons.Mail" [size]="26" aria-hidden="true" /></span>
+                  <span class="contact-copy"><span class="label">Email компании</span><span>{{ card.companyEmail.value }}</span></span>
+                </a>
+              }
+              @if (visible(card.companyWebsite) && webUrl(card.companyWebsite.value)) {
+                <a class="surface detail-row" [href]="webUrl(card.companyWebsite.value)" target="_blank" rel="noopener noreferrer">
+                  <span class="icon-tile"><lucide-icon [img]="icons.Globe" [size]="26" aria-hidden="true" /></span>
+                  <span class="contact-copy"><span class="label">Сайт компании</span><span>{{ card.companyWebsite.value }}</span></span>
+                </a>
+              }
+              @if (visible(card.companyAddress)) {
+                <div class="surface address-card">
+                  <a class="detail-row" [href]="companyMapLink()" target="_blank" rel="noopener noreferrer">
+                    <span class="icon-tile"><lucide-icon [img]="icons.MapPin" [size]="26" aria-hidden="true" /></span>
+                    <span class="contact-copy"><span class="label">Адрес компании</span><span>{{ card.companyAddress.value }}</span></span>
+                  </a>
+                  @if (card.blocks.map) {
+                    <div class="map-frame">
+                      <iframe [src]="companyMapEmbed()" title="Адрес компании на Яндекс Картах" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe>
+                    </div>
+                  }
+                </div>
+              }
+            </section>
+          }
+        </div>
+        <footer>Электронная визитка</footer>
+      </div>
+    </article>
+  } @else if (request().status === 'loading') {
+    <section class="not-found" role="status" aria-live="polite">
+      <h1>Загружаем визитку</h1>
+      <p>Это займёт несколько секунд.</p>
+    </section>
+  } @else if (request().status === 'error') {
+    <section class="not-found" role="alert">
+      <h1>Не удалось загрузить визитку</h1>
+      <p>Проверьте подключение и попробуйте ещё раз.</p>
+      <button type="button" class="save-button" (click)="reload()">Попробовать снова</button>
+    </section>
+  } @else {
+    <section class="not-found">
+      <span class="icon-tile"><lucide-icon [img]="icons.ContactRound" [size]="32" aria-hidden="true" /></span>
+      <h1>Визитка не найдена</h1>
+      <p>Проверьте адрес ссылки. Возможно, визитка ещё не опубликована.</p>
+    </section>
+  }
+</main>

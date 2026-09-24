@@ -1,0 +1,33 @@
+<dialog #dialog class="qr-dialog" aria-labelledby="qr-title" (close)="onClosed()">
+  <div class="qr-heading">
+    <h2 id="qr-title">QR-код визитки</h2>
+    <button type="button" class="secondary close-button" autofocus aria-label="Закрыть QR-код" (click)="close()">
+      <lucide-icon [img]="icons.X" [size]="20" aria-hidden="true" />
+    </button>
+  </div>
+  @if (card(); as selected) {
+    <p class="qr-name">{{ selected.displayName }}</p>
+    <p class="subtitle">Наведите камеру телефона, чтобы открыть опубликованную визитку.</p>
+    @if (loading()) {
+      <p class="status" role="status">Создаём QR-код…</p>
+    }
+    @if (image(); as source) {
+      <img class="qr-image" [src]="source" [alt]="'QR-код визитки ' + selected.displayName" width="280" height="280">
+    }
+    @if (error()) {
+      <p class="error" role="alert">{{ error() }}</p>
+    }
+    <label for="qr-public-url">Ссылка в QR-коде</label>
+    <input #publicUrl id="qr-public-url" readonly [value]="selected.publicUrl" (click)="publicUrl.select()">
+    <div class="qr-actions">
+      <button type="button" class="primary" [disabled]="!image()" (click)="download()">
+        <lucide-icon [img]="icons.Download" [size]="18" aria-hidden="true" /> Скачать PNG
+      </button>
+      <button type="button" class="secondary" (click)="copyLink(publicUrl)">
+        <lucide-icon [img]="icons.Copy" [size]="18" aria-hidden="true" /> Копировать ссылку
+      </button>
+    </div>
+    <p class="hint">Изменения контактов не меняют QR-код. После снятия с публикации визитка по этой ссылке недоступна.</p>
+    <p class="copy-status" role="status">{{ message() }}</p>
+  }
+</dialog>

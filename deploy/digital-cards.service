@@ -1,0 +1,27 @@
+[Unit]
+Description=Digital Cards API
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=digital-cards
+Group=digital-cards
+WorkingDirectory=/opt/digital-cards/backend
+EnvironmentFile=/etc/digital-cards/backend.env
+ExecStart=/usr/bin/node /opt/digital-cards/backend/dist/main.js
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=30
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/digital-cards/images
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=digital-cards
+
+[Install]
+WantedBy=multi-user.target

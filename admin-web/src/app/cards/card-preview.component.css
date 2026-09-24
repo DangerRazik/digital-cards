@@ -1,0 +1,41 @@
+:host {
+  color-scheme: light;
+  --page: #eef5fd;
+  --surface: #fff;
+  --card: #f6f9fe;
+  --text: #102650;
+  --muted: #5c6c87;
+  --accent: #1672fa;
+  --accent-hover: #0c5cda;
+  --accent-soft: #e9f2ff;
+  --border: #d9e4f2;
+  --shadow: 0 6px 22px rgb(38 74 127 / 7%);
+  --focus: #003c9c;
+  font-family: 'Manrope', system-ui, sans-serif;
+  font-size: 16px;
+  color: var(--text);
+  background: var(--page);
+}
+
+:host {
+  display: block;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.page {
+  min-height: 0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+}

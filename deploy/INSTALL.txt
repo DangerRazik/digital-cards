@@ -1,0 +1,106 @@
+DIGITAL CARDS — ПЕРВОЕ РАЗМЕЩЕНИЕ НА UBUNTU
+
+Этот набор предназначен для администратора Linux-сервера.
+Требования: Node.js 24 (/usr/bin/node), npm, PostgreSQL 17 (включая psql,
+pg_dump, pg_restore), Nginx, два домена и действующие TLS-сертификаты.
+PostgreSQL и backend доступны только локально. Не открывать порты 3000 и 5432
+в Интернет. Извне нужны HTTPS и SSH для администратора.
+Конфигурация рассчитана на один процесс backend и Nginx на том же сервере.
+
+1. Распаковать архив в рабочую папку обычного пользователя. Из её корня:
+
+for project in backend public-web admin-web; do
+  (cd "$project" && npm ci && npm run build) || exit 1
+done
+
+Сборки выполняются на сервере;
+
+2. При первом размещении, из корня распакованного проекта:
+
+sudo useradd --system --user-group --home-dir /var/lib/digital-cards --shell /usr/sbin/nologin digital-cards
+sudo install -d -m 755 /opt/digital-cards
+sudo cp -a backend public-web admin-web deploy /opt/digital-cards/
+sudo chown -R root:root /opt/digital-cards
+sudo chmod -R a+rX /opt/digital-cards
+sudo install -d -o digital-cards -g digital-cards -m 700 /var/lib/digital-cards/images
+
+3. Создать БД и роли. ЗАМЕНИТЬ адреса на реальные, без конечного /:
+
+sudo /usr/bin/node /opt/digital-cards/deploy/init-database.cjs https://admin.cards.example.ru https://card.example.ru
+
+Скрипт только для новой БД. Существующую БД и роли не заменяет.
+Пароли создаются на сервере и сохраняются в /etc/digital-cards/backend.env
+с правами 600. Там же находятся production, HTTPS origins и каталог изображений.
+При сбое файл с паролями сохраняется: нужно проверить частично созданные
+роли/БД, не удаляя их вслепую. PostgreSQL должен разрешать peer-вход системному
+пользователю postgres и парольный вход прикладным ролям с 127.0.0.1.
+Для удалённой БД этот способ установки нужно адаптировать.
+
+4. Запуск backend:
+
+sudo install -m 644 deploy/digital-cards.service /etc/systemd/system/digital-cards.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now digital-cards
+sudo systemctl status digital-cards
+sudo journalctl -u digital-cards -n 80 --no-pager
+
+5. Nginx:
+Получить сертификаты принятым в организации способом. В deploy/nginx.conf
+заменить оба домена и пути сертификатов. Затем:
+
+sudo install -m 644 deploy/nginx.conf /etc/nginx/sites-available/digital-cards
+sudo ln -s /etc/nginx/sites-available/digital-cards /etc/nginx/sites-enabled/digital-cards
+sudo nginx -t
+sudo systemctl reload nginx
+
+Не включать шаблон до замены доменов и подготовки сертификатов.
+Nginx ПЕРЕЗАПИСЫВАЕТ X-Real-IP; backend доверяет ему только с loopback.
+На публичном домене административный API закрыт.
+Не раздавать /var/lib/digital-cards/images статически: доступ к изображениям
+проверяется backend, иначе фотографии черновиков станут публичными.
+Для нескольких прокси/балансировщика настройку IP нужно пересмотреть.
+
+6. Проверка после установки:
+Создать двух пользователей. Проверить вход, создание, сохранение, загрузку фото,
+предпросмотр, публикацию, отметку изменений, снятие и удаление.
+Открыть опубликованную ссылку с другого устройства.
+Проверить, что второй пользователь не читает чужой черновик или его изображения,
+а публичная ссылка до публикации и после снятия получает 404.
+Перезапустить службу; визитки и фото должны остаться.
+Локальные визитки и фотографии Windows в этом архиве отсутствуют.
+
+7. Резервное копирование:
+
+sudo bash /opt/digital-cards/deploy/backup.sh
+sudo install -m 644 deploy/digital-cards-backup.service /etc/systemd/system/
+sudo install -m 644 deploy/digital-cards-backup.timer /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now digital-cards-backup.timer
+
+Копия создаётся ежедневно в 03:00 по времени сервера. На время копирования
+backend кратко останавливается и затем запускается, если до этого работал.
+Копии: /var/backups/digital-cards; завершённая содержит файл COMPLETE.
+Администратор должен настроить вынос копий с сервера, сроки хранения и контроль
+места. Автоматического удаления старых резервных копий нет.
+В копиях есть пароли и персональные данные: доступ только администраторам.
+
+ОБНОВЛЕНИЕ
+Собрать новый архив в отдельной рабочей папке. Сделать backup рабочей версии.
+Остановить backend, сохранить предыдущие файлы /opt/digital-cards для отката,
+заменить их новой версией. Не заменять /etc/digital-cards и /var/lib/digital-cards.
+Выполнить sudo bash /opt/digital-cards/deploy/migrate.sh и запустить службу.
+После обновления проверить публикацию и загрузки. При сбое не запускать
+инициализацию БД повторно; использовать согласованный откат файлов/резервной копии.
+
+ПРОВЕРКА ВОССТАНОВЛЕНИЯ (отдельная тестовая БД, НЕ рабочая)
+Пусть /путь/к/копии — каталог с COMPLETE:
+
+sudo -u postgres createdb digital_cards_restore_test
+sudo sh -c 'cat /путь/к/копии/database.dump | runuser -u postgres -- pg_restore --exit-on-error --single-transaction --no-owner --no-privileges -d digital_cards_restore_test'
+sudo -u postgres psql -d digital_cards_restore_test -c 'SELECT count(*) FROM cards;'
+
+Для нового сервера отдельно восстановить роли, конфигурацию и каталог images
+(включая .json с владельцами), назначить владельца файлов digital-cards,
+и восстановить дамп с исходными правами. roles.sql может содержать существующие
+системные роли; администратор должен просмотреть его перед применением.
+Полное восстановление проверяется отдельно до признания резервных копий рабочими.

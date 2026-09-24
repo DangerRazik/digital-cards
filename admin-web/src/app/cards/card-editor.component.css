@@ -1,0 +1,159 @@
+.editor-section + .editor-section {
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
+  margin-top: 24px;
+}
+
+h4 {
+  margin: 0 0 16px;
+  font-size: 15px;
+}
+
+.section-hint {
+  margin: -6px 0 18px;
+}
+
+.permanent-url {
+  overflow-wrap: anywhere;
+}
+
+textarea {
+  width: 100%;
+  min-height: 100px;
+  resize: vertical;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 16px;
+  color: var(--text);
+  background: white;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 0;
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.toggle input {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+.block-toggle {
+  margin: 0;
+}
+
+.preview-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+/* Скрываем, а не уничтожаем форму: введённые значения сохраняются при возврате. */
+form[hidden] {
+  display: none;
+}
+
+.image-grid {
+  display: grid;
+  gap: 16px;
+}
+
+.image-field {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface, white);
+}
+
+.image-field h5 {
+  margin: 0 0 14px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.image-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 160px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--accent-soft, #f0f5ff);
+}
+
+.image-preview {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.portrait-stage .image-preview {
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+}
+
+.image-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.image-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.choose-image {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+}
+
+.remove-image {
+  flex: 0 0 44px;
+  min-height: 44px;
+  padding: 0;
+  color: var(--error);
+}
+
+.image-field .toggle {
+  margin-top: 14px;
+}
+
+.image-field button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.image-field input[hidden] {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .image-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

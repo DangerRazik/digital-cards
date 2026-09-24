@@ -1,0 +1,83 @@
+<main class="page">
+  <a class="brand" href="/" aria-label="Digital Cards — главная">
+    <span class="brand-icon"><lucide-icon [img]="icons.ContactRound" [size]="24" /></span>
+    <span>Digital <strong>Cards</strong></span>
+  </a>
+
+  @if (checkingSession()) {
+    <section class="panel status-panel" aria-live="polite">
+      <span class="eyebrow">ЛИЧНЫЙ КАБИНЕТ</span>
+      <h1>Проверяем вход</h1>
+      <p>Это займёт всего несколько секунд.</p>
+    </section>
+  } @else if (sessionError()) {
+    <section class="panel status-panel">
+      <h1>Нет связи с сервером</h1>
+      <p role="alert">{{ errorMessage() }}</p>
+      <button class="primary" type="button" (click)="checkSession()">Попробовать снова</button>
+    </section>
+  } @else if (user(); as currentUser) {
+    <section class="panel dashboard">
+      <div class="dashboard-header">
+        <span class="eyebrow">ЛИЧНЫЙ КАБИНЕТ</span>
+        <button class="text-button logout" type="button" (click)="logout()" [disabled]="busy()">
+          <lucide-icon [img]="icons.LogOut" [size]="18" /> Выйти
+        </button>
+      </div>
+      @if (!hideWelcome()) {
+        <h1>Добро пожаловать</h1>
+        <p class="account-email">{{ currentUser.email }}</p>
+      }
+      <app-cards (sessionExpired)="onSessionExpired()" />
+      @if (errorMessage()) {
+        <p class="error" role="alert">{{ errorMessage() }}</p>
+      }
+    </section>
+  } @else {
+    <section class="panel auth-panel">
+      @if (isRegistration()) {
+        <h1>Создайте аккаунт</h1>
+        <p class="intro">Первый шаг к вашей электронной визитке.</p>
+      } @else {
+        <h1>Рады видеть вас</h1>
+        <p class="intro">Войдите в личный кабинет, чтобы продолжить.</p>
+      }
+      <div class="mode-switch" aria-label="Способ входа">
+        <button type="button" [class.active]="!isRegistration()" [attr.aria-pressed]="!isRegistration()" [disabled]="busy()" (click)="changeMode('login')">Вход</button>
+        <button type="button" [class.active]="isRegistration()" [attr.aria-pressed]="isRegistration()" [disabled]="busy()" (click)="changeMode('register')">Регистрация</button>
+      </div>
+      <form (submit)="submit($event)" [attr.aria-busy]="busy()">
+        <fieldset [disabled]="busy()">
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" autocomplete="username" placeholder="name@company.ru" required maxlength="254" [value]="email()" (input)="email.set($any($event.target).value)">
+
+          <label for="password">Пароль</label>
+          <input id="password" name="password" type="password" [attr.autocomplete]="isRegistration() ? 'new-password' : 'current-password'" required minlength="8" maxlength="128" [attr.aria-describedby]="isRegistration() ? 'password-hint' : null" [value]="password()" (input)="password.set($any($event.target).value)">
+          @if (isRegistration()) {
+            <p class="hint" id="password-hint">От 8 до 128 символов. Можно использовать длинную фразу.</p>
+            <label for="confirmation">Повторите пароль</label>
+            <input id="confirmation" name="confirmation" type="password" autocomplete="new-password" required minlength="8" maxlength="128" [value]="passwordConfirmation()" (input)="passwordConfirmation.set($any($event.target).value)">
+          }
+
+          @if (errorMessage()) {
+            <p class="error" role="alert">{{ errorMessage() }}</p>
+          }
+          <button class="primary" type="submit">
+            @if (busy()) {
+              Подождите…
+            } @else if (isRegistration()) {
+              Создать аккаунт
+            } @else {
+              Войти
+            }
+          </button>
+        </fieldset>
+      </form>
+      <div class="security-note">
+        <lucide-icon [img]="icons.ShieldCheck" [size]="18" />
+        <span>Доступ к личному кабинету защищён паролем</span>
+      </div>
+    </section>
+  }
+  <footer>Digital Cards · Электронные визитки</footer>
+</main>

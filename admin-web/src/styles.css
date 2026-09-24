@@ -1,0 +1,52 @@
+@import '@fontsource/manrope/cyrillic-500.css';
+@import '@fontsource/manrope/cyrillic-800.css';
+@import '@fontsource/manrope/latin-500.css';
+@import '@fontsource/manrope/latin-800.css';
+@import '@fontsource/manrope/cyrillic-400.css';
+@import '@fontsource/manrope/cyrillic-600.css';
+@import '@fontsource/manrope/cyrillic-700.css';
+@import '@fontsource/manrope/latin-400.css';
+@import '@fontsource/manrope/latin-600.css';
+@import '@fontsource/manrope/latin-700.css';
+
+:root {
+  color-scheme: light;
+  --page: #f3f7fd;
+  --surface: #ffffff;
+  --text: #152449;
+  --muted: #66758e;
+  --accent: #176cf2;
+  --border: #dfe7f2;
+  --error: #a32838;
+  font-family: 'Manrope', sans-serif;
+  color: var(--text);
+  background: var(--page);
+}
+
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+button, input {
+  font: inherit;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: wait;
+  opacity: .65;
+}
+button, a, input {
+  -webkit-tap-highlight-color: transparent;
+}
+:focus-visible {
+  outline: 3px solid #8fbcff;
+  outline-offset: 3px;
+}
+lucide-icon {
+  display: inline-flex;
+  vertical-align: middle;
+}

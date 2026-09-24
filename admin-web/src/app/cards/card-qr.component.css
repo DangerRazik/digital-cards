@@ -1,0 +1,57 @@
+.qr-dialog {
+  box-sizing: border-box;
+  width: min(480px, calc(100vw - 24px));
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+  margin: auto;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--surface, white);
+  color: var(--text);
+  box-shadow: 0 20px 70px #10234933;
+}
+.qr-dialog::backdrop {
+  background: #10234980;
+}
+.qr-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.qr-heading h2 {
+  font-size: 21px;
+}
+.close-button {
+  flex: 0 0 44px;
+  height: 44px;
+  padding: 0;
+}
+.qr-name {
+  margin-top: 12px;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.qr-image {
+  display: block;
+  width: min(280px, 100%);
+  height: auto;
+  margin: 16px auto;
+  background: white;
+}
+.qr-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 16px 0;
+}
+.copy-status {
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}

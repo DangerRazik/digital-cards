@@ -1,0 +1,10 @@
+[Unit]
+Description=Daily Digital Cards backup
+
+[Timer]
+OnCalendar=*-*-* 03:00:00
+Persistent=true
+Unit=digital-cards-backup.service
+
+[Install]
+WantedBy=timers.target

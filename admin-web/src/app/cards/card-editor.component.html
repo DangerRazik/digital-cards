@@ -1,0 +1,173 @@
+<form [hidden]="previewCard() !== null" #editorForm class="create-form" (submit)="save($event, editorForm)" [attr.aria-busy]="saving() || previewing() || uploading()">
+  <h3>
+    @if (card()) {
+      Редактирование черновика
+    } @else {
+      Новая визитка
+    }
+  </h3>
+  <p class="subtitle">Изменения сохраняются в черновике. Опубликованная версия остаётся прежней.</p>
+  @if (card(); as existingCard) {
+    <p class="hint permanent-url">Постоянный адрес: {{ existingCard.publicUrl }}</p>
+  }
+
+  <fieldset [disabled]="saving() || previewing() || uploading()">
+    <section class="editor-section">
+      <h4>ФИО</h4>
+      <div class="form-grid">
+        <div>
+          <label for="edit-last-name">Фамилия *</label>
+          <input id="edit-last-name" name="lastName" autocomplete="family-name" required maxlength="100" [value]="getDraft().lastName">
+        </div>
+        <div>
+          <label for="edit-first-name">Имя *</label>
+          <input id="edit-first-name" name="firstName" autocomplete="given-name" required maxlength="100" [value]="getDraft().firstName">
+        </div>
+        <div>
+          <label for="edit-middle-name">Отчество</label>
+          <input id="edit-middle-name" name="middleName" autocomplete="additional-name" maxlength="100" [value]="getDraft().middleName">
+        </div>
+      </div>
+    </section>
+
+    <section class="editor-section">
+      <h4>Изображения</h4>
+      <p class="hint section-hint">JPG, PNG или WebP до 10 МБ. Большие фотографии уменьшаются автоматически.</p>
+      <div class="image-grid">
+        @for (field of imageFields; track field.key) {
+          <div class="image-field" role="group" [attr.aria-labelledby]="'image-title-' + field.key">
+            <h5 [id]="'image-title-' + field.key">{{ field.label }}</h5>
+            <div class="image-stage" [class.portrait-stage]="field.key === 'photo'">
+              @if (imagePreview(field.key); as source) {
+                <img class="image-preview" [src]="source" [alt]="field.label">
+              } @else {
+                <div class="image-placeholder">
+                  <lucide-icon [img]="imageIcons.ImagePlus" [size]="32" aria-hidden="true" />
+                  <span>Изображение не выбрано</span>
+                </div>
+              }
+            </div>
+            <input #picker hidden type="file" accept="image/jpeg,image/png,image/webp" (change)="uploadImage(field.key, picker, editorForm)">
+            <div class="image-actions">
+              <button type="button" class="secondary choose-image" (click)="picker.click()" [attr.aria-label]="'Выбрать изображение: ' + field.label">
+                <lucide-icon [img]="imageIcons.Upload" [size]="17" aria-hidden="true" />
+                @if (imageValue(field.key)) {
+                  Заменить
+                } @else {
+                  Выбрать файл
+                }
+              </button>
+              @if (imageValue(field.key)) {
+                <button type="button" class="secondary remove-image" (click)="setImage(field.key, '')" [attr.aria-label]="'Удалить изображение: ' + field.label" title="Удалить изображение">
+                  <lucide-icon [img]="imageIcons.Trash2" [size]="18" aria-hidden="true" />
+                </button>
+              }
+            </div>
+            <label class="toggle">
+              <input type="checkbox" [name]="field.key + '.enabled'" [checked]="getDraft()[field.key].enabled" [disabled]="!imageValue(field.key)">
+              Показывать на визитке
+            </label>
+          </div>
+        }
+      </div>
+      @if (uploading()) {
+        <p class="hint" role="status">Загружаем изображение…</p>
+      }
+      @if (imageError()) {
+        <p class="error" role="alert">{{ imageError() }}</p>
+      }
+    </section>
+
+    @for (group of groups; track group.title) {
+      <section class="editor-section">
+        <h4>{{ group.title }}</h4>
+        @if (group.hint) {
+          <p class="hint section-hint">{{ group.hint }}</p>
+        }
+        <div class="form-grid">
+          @for (field of group.fields; track field.key) {
+            <div [class.full-width]="field.multiline">
+              <label [for]="'edit-' + field.key">{{ field.label }}</label>
+              @if (field.multiline) {
+                <textarea [id]="'edit-' + field.key" [name]="field.key" rows="4" [maxLength]="field.maxLength" [value]="getDraft()[field.key].value"></textarea>
+              } @else {
+                <input [id]="'edit-' + field.key" [name]="field.key" [type]="field.type || 'text'" [maxLength]="field.maxLength" [value]="getDraft()[field.key].value">
+              }
+              @if (field.hint) {
+                <p class="hint">{{ field.hint }}</p>
+              }
+              <label class="toggle">
+                <input type="checkbox" [name]="field.key + '.enabled'" [checked]="isFieldEnabled(field.key)" [attr.aria-label]="'Показывать: ' + field.label">
+                Показывать на визитке
+              </label>
+            </div>
+          }
+        </div>
+      </section>
+    }
+
+    <section class="editor-section">
+      <h4>Мессенджеры</h4>
+      <p class="hint section-hint">Укажите полную HTTP/HTTPS ссылку на профиль или чат.</p>
+      <div class="form-grid">
+        @for (field of messengerFields; track field.key) {
+          <div>
+            <label [for]="'edit-' + field.key">{{ field.label }}</label>
+            <input [id]="'edit-' + field.key" [name]="'messengers.' + field.key" maxlength="2048" [value]="getDraft().messengers[field.key].value">
+            <label class="toggle">
+              <input type="checkbox" [name]="'messengers.' + field.key + '.enabled'" [checked]="getDraft().messengers[field.key].enabled && getDraft().blocks.messengers" [attr.aria-label]="'Показывать: ' + field.label">
+              Показывать на визитке
+            </label>
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="editor-section">
+      <h4>Оформление</h4>
+
+      <div class="form-grid">
+        @for (block of blockFields; track block.key) {
+          <label class="toggle block-toggle">
+            <input type="checkbox" [name]="'blocks.' + block.key" [checked]="getDraft().blocks[block.key]">
+            {{ block.label }}
+          </label>
+        }
+      </div>
+    </section>
+
+    @if (errorMessage()) {
+      <p class="error" role="alert">{{ errorMessage() }}</p>
+    }
+    <div class="form-actions">
+      <button type="submit" class="primary">
+        @if (saving()) {
+          Сохраняем…
+        } @else {
+          Сохранить черновик
+        }
+      </button>
+      <button type="button" class="secondary" (click)="preview(editorForm)">
+        @if (previewing()) {
+          Готовим предпросмотр…
+        } @else {
+          Предпросмотр
+        }
+      </button>
+      <button type="button" class="secondary" (click)="cancelled.emit()">Отмена</button>
+    </div>
+  </fieldset>
+</form>
+
+@if (previewCard(); as preview) {
+  <section aria-label="Предпросмотр визитки">
+    <div class="preview-toolbar">
+      <div>
+        <h3>Предпросмотр</h3>
+        <p class="hint">Текущие данные формы. Изменения ещё не сохранены и не опубликованы.</p>
+      </div>
+      <button type="button" class="secondary" (click)="previewCard.set(null)">Вернуться к редактированию</button>
+    </div>
+    <app-card-preview [card]="preview" />
+  </section>
+}
