@@ -18,3 +18,6 @@ qa/
 /public-web/public/assets/avatar.jpg
 /public-web/public/assets/fon.jpg
 /AGENTS.md
+
+# Серверные настройки с паролями; образец backend.env.example остаётся в Git.
+**/backend.env

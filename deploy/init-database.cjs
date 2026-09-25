@@ -1,8 +1,9 @@
-// Run once as root on Ubuntu, with local PostgreSQL 17 and its postgres OS user.
+// Prepare an existing, empty application database using local PostgreSQL administration.
 const fs = require('node:fs');
 const path = require('node:path');
 const { randomBytes } = require('node:crypto');
 const { spawnSync } = require('node:child_process');
+const { isIP } = require('node:net');
 
 function psql(database, sql) {
   const result = spawnSync('runuser', [
@@ -16,10 +17,20 @@ function psql(database, sql) {
   return result.stdout.trim();
 }
 
-function readOrigin(value) {
+function readOrigin(value, internalHttp) {
   const url = new URL(value);
-  if (url.protocol !== 'https:' || url.origin !== value) {
-    throw new Error('Provide two HTTPS origins without a trailing slash or path.');
+  const protocol = internalHttp ? 'http:' : 'https:';
+  if (url.protocol !== protocol || url.origin !== value) {
+    throw new Error('Provide two site origins with the required protocol, without a path or trailing slash.');
+  }
+  if (internalHttp) {
+    const [first, second] = url.hostname.split('.').map(Number);
+    const privateAddress = first === 10 || first === 127
+      || (first === 172 && second >= 16 && second <= 31)
+      || (first === 192 && second === 168);
+    if (isIP(url.hostname) !== 4 || !privateAddress) {
+      throw new Error('Internal HTTP is only supported for private IPv4 addresses.');
+    }
   }
   return value;
 }
@@ -28,22 +39,39 @@ function main() {
   if (process.platform !== 'linux' || process.getuid() !== 0) {
     throw new Error('Run this script with sudo on the target Ubuntu server.');
   }
-  const adminOrigin = readOrigin(process.argv[2]);
-  const publicOrigin = readOrigin(process.argv[3]);
+  const internalHttp = process.argv[5] === '--internal-http';
+  if (process.argv.length > 6 || (process.argv[5] && !internalHttp)) {
+    throw new Error('Unknown option. Optional fifth argument: --internal-http.');
+  }
+  const adminOrigin = readOrigin(process.argv[2], internalHttp);
+  const publicOrigin = readOrigin(process.argv[3], internalHttp);
+  const database = process.argv[4] || 'razildb';
+  if (!/^[a-z][a-z0-9_]{0,62}$/.test(database)) {
+    throw new Error('Database name must contain lowercase letters, digits or underscores.');
+  }
   if (adminOrigin === publicOrigin) {
     throw new Error('Use separate origins for the cabinet and public cards.');
   }
   const envPath = '/etc/digital-cards/backend.env';
   if (fs.existsSync(envPath)) {
-    throw new Error('Configuration already exists. For updates use migrate.sh; do not reinitialize.');
+    throw new Error('Configuration already exists. Edit backend.env if needed; do not reinitialize the database.');
+  }
+  const databaseExists = psql('postgres', `SELECT 1 FROM pg_database WHERE datname = '${database}';`);
+  if (databaseExists !== '1') {
+    throw new Error('The application database must already exist. This script does not create databases.');
   }
   const existing = psql('postgres', `
-    SELECT 1 FROM pg_database WHERE datname = 'digital_cards'
-    UNION ALL
     SELECT 1 FROM pg_roles WHERE rolname IN ('cards_public', 'cards_auth', 'cards_editor');
   `);
   if (existing) {
-    throw new Error('Database or roles already exist. Initialization will not overwrite them.');
+    throw new Error('Application roles already exist. Initialization will not overwrite them.');
+  }
+  const existingObjects = psql(database, `
+    SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p', 'v', 'm', 'S', 'f') LIMIT 1;
+  `);
+  if (existingObjects) {
+    throw new Error('The public schema is not empty. Ask the database administrator to review it first.');
   }
 
   const roles = ['cards_public', 'cards_auth', 'cards_editor'];
@@ -52,10 +80,11 @@ function main() {
     passwords[role] = randomBytes(32).toString('hex');
   }
   function databaseUrl(role) {
-    return `postgresql://${role}:${passwords[role]}@127.0.0.1:5432/digital_cards`;
+    return `postgresql://${role}:${passwords[role]}@127.0.0.1:5432/${database}`;
   }
   const environment = [
     'NODE_ENV=production',
+    `INTERNAL_HTTP=${internalHttp}`,
     'HOST=127.0.0.1',
     'PORT=3000',
     'TRUST_LOCAL_PROXY=true',
@@ -71,28 +100,24 @@ function main() {
   // Keep the generated credentials even if a later initialization step fails.
   fs.writeFileSync(envPath, environment, { flag: 'wx', mode: 0o600 });
 
-  let roleSql = 'BEGIN;\n';
+  let schema = 'BEGIN;\n';
   for (const role of roles) {
-    roleSql += `CREATE ROLE ${role} LOGIN PASSWORD '${passwords[role]}' NOSUPERUSER NOCREATEDB NOCREATEROLE;\n`;
+    schema += `CREATE ROLE ${role} LOGIN PASSWORD '${passwords[role]}' NOSUPERUSER NOCREATEDB NOCREATEROLE;\n`;
   }
-  roleSql += 'COMMIT;';
-  psql('postgres', roleSql);
-  psql('postgres', 'CREATE DATABASE digital_cards;');
-  psql('digital_cards', `
-    REVOKE ALL ON DATABASE digital_cards FROM PUBLIC;
-    GRANT CONNECT ON DATABASE digital_cards TO cards_public, cards_auth, cards_editor;
+  schema += `
+    REVOKE ALL ON DATABASE "${database}" FROM PUBLIC;
+    GRANT CONNECT ON DATABASE "${database}" TO cards_public, cards_auth, cards_editor;
     REVOKE CREATE ON SCHEMA public FROM PUBLIC;
     GRANT USAGE ON SCHEMA public TO cards_public, cards_auth, cards_editor;
     ALTER ROLE cards_public SET default_transaction_read_only = on;
-  `);
+  `;
   const schemaDir = path.resolve(__dirname, '../backend/database');
   const files = fs.readdirSync(schemaDir).filter(name => /^\d{3}-.*\.sql$/.test(name)).sort();
-  let schema = 'BEGIN;\n';
   for (const name of files) {
     schema += fs.readFileSync(path.join(schemaDir, name), 'utf8') + '\n';
   }
   schema += 'COMMIT;';
-  psql('digital_cards', schema);
+  psql(database, schema);
   console.log('Database initialized. Credentials are in /etc/digital-cards/backend.env (root only).');
 }
 

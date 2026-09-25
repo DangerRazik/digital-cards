@@ -1,6 +1,7 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { validateSiteOrigins } from './site-origins';
 
 async function bootstrap(): Promise<void> {
   if (!process.env.DATABASE_URL || !process.env.AUTH_DATABASE_URL || !process.env.ADMIN_ORIGIN) {
@@ -11,21 +12,7 @@ async function bootstrap(): Promise<void> {
     throw new Error('EDITOR_DATABASE_URL и PUBLIC_CARD_ORIGIN должны быть заданы.');
   }
 
-  const publicOrigin = new URL(process.env.PUBLIC_CARD_ORIGIN);
-
-  if (publicOrigin.origin !== process.env.PUBLIC_CARD_ORIGIN || !['http:', 'https:'].includes(publicOrigin.protocol)) {
-    throw new Error('PUBLIC_CARD_ORIGIN должен быть HTTP/HTTPS origin без пути.');
-  }
-
-  const adminOrigin = new URL(process.env.ADMIN_ORIGIN);
-
-  if (adminOrigin.origin !== process.env.ADMIN_ORIGIN) {
-    throw new Error('ADMIN_ORIGIN должен содержать только origin без пути.');
-  }
-
-  if (process.env.NODE_ENV === 'production' && (adminOrigin.protocol !== 'https:' || publicOrigin.protocol !== 'https:')) {
-    throw new Error('В production кабинет и публичные визитки должны работать по HTTPS.');
-  }
+  validateSiteOrigins(process.env);
 
   const app = await NestFactory.create(AppModule);
   app.setGlobalPrefix('api');

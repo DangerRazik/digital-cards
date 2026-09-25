@@ -1,0 +1,11 @@
+{
+  "name": "digital-cards",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Локальный запуск Digital Cards на Windows",
+  "scripts": {
+    "start": "powershell.exe -NoProfile -File ./start-local.ps1",
+    "setup": "powershell.exe -NoProfile -File ./setup-local.ps1",
+    "db:stop": "powershell.exe -NoProfile -File ./stop-db.ps1"
+  }
+}

@@ -1,7 +1,0 @@
-[Unit]
-Description=Backup Digital Cards database and images
-
-[Service]
-Type=oneshot
-ExecStart=/bin/bash /opt/digital-cards/deploy/backup.sh
-UMask=0077

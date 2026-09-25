@@ -26,9 +26,12 @@ export function writeSessionCookie(response: ServerResponse, token: string, maxA
     `Max-Age=${maxAge}`,
   ];
 
-  // На сервере cookie должна передаваться только по HTTPS. Domain не задаём:
-  // сессия принадлежит кабинету и не распространяется на соседние поддомены.
-  if (process.env.NODE_ENV === 'production') {
+  // HTTP исключение включается явно для внутреннего тестового сервера.
+  // Domain не задаём; Path ограничивает отправку cookie административным API.
+  const internalHttp = process.env.INTERNAL_HTTP === 'true'
+    && process.env.ADMIN_ORIGIN?.startsWith('http://');
+
+  if (process.env.NODE_ENV === 'production' && !internalHttp) {
     attributes.push('Secure');
   }
 
