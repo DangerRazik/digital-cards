@@ -6,8 +6,9 @@ const { spawnSync } = require('node:child_process');
 const { isIP } = require('node:net');
 
 function psql(database, sql) {
+  const executable = process.env.PSQL_BIN || 'psql';
   const result = spawnSync('runuser', [
-    '-u', 'postgres', '--', 'psql', '-X', '-q', '-t', '-A',
+    '-u', 'postgres', '--', executable, '-X', '-q', '-t', '-A',
     '-v', 'ON_ERROR_STOP=1', '-d', database,
   ], { input: sql, encoding: 'utf8', cwd: '/tmp' });
   if (result.error || result.status !== 0) {
@@ -37,7 +38,7 @@ function readOrigin(value, internalHttp) {
 
 function main() {
   if (process.platform !== 'linux' || process.getuid() !== 0) {
-    throw new Error('Run this script with sudo on the target Ubuntu server.');
+    throw new Error('Run this script with sudo on the target Linux server.');
   }
   const internalHttp = process.argv[5] === '--internal-http';
   if (process.argv.length > 6 || (process.argv[5] && !internalHttp)) {
@@ -100,7 +101,8 @@ function main() {
   // Keep the generated credentials even if a later initialization step fails.
   fs.writeFileSync(envPath, environment, { flag: 'wx', mode: 0o600 });
 
-  let schema = 'BEGIN;\n';
+  // Existing PostgreSQL installations may still default to MD5 passwords.
+  let schema = "BEGIN;\nSET LOCAL password_encryption = 'scram-sha-256';\n";
   for (const role of roles) {
     schema += `CREATE ROLE ${role} LOGIN PASSWORD '${passwords[role]}' NOSUPERUSER NOCREATEDB NOCREATEROLE;\n`;
   }

@@ -43,5 +43,8 @@ npm start
 
 ## Развёртывание
 
+RED OS 7.3.3 с внешним HTTPS-прокси: [deploy/REDOS.md](deploy/REDOS.md).
+Визитки — `https://cards.citrt.ru`, кабинет — `https://cardsadmin.citrt.ru`.
+
 Инструкция для Ubuntu, Node.js, PostgreSQL и Nginx: [deploy/INSTALL.txt](deploy/INSTALL.txt).
-Текущий вариант — внутреннее тестирование по IP на портах 8081/8082, без доменов и HTTPS. На Linux backend запускается службой systemd, frontend раздаёт Nginx. Подготовка БД рассчитана на существующую пустую базу `razildb`.
+Вариант Ubuntu — внутреннее тестирование по IP на портах 8081/8082, без доменов и HTTPS. На Linux backend запускается службой systemd, frontend раздаёт Nginx. Подготовка БД для этого варианта рассчитана на существующую пустую базу `razildb`.

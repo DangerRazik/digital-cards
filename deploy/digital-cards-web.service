@@ -1,0 +1,17 @@
+[Unit]
+Description=Digital Cards web sites
+After=network-online.target digital-cards.service
+Wants=network-online.target digital-cards.service
+
+[Service]
+Type=simple
+ExecStartPre=/usr/sbin/nginx -t -c /etc/digital-cards/nginx.conf
+ExecStart=/usr/sbin/nginx -c /etc/digital-cards/nginx.conf -g "daemon off;"
+ExecReload=/bin/kill -HUP $MAINPID
+KillSignal=SIGQUIT
+TimeoutStopSec=30
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
