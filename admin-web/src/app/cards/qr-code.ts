@@ -12,7 +12,9 @@ export function validateCardUrl(value: string): URL {
 export async function createCardQr(value: string): Promise<string> {
   validateCardUrl(value);
   // Библиотека загружается только при открытии QR. В код включаем ровно публичную ссылку.
-  const qrCode = await import('qrcode');
+  const qrCodeModule = await import('qrcode');
+  // qrcode использует CommonJS: после сборки его функции доступны через default.
+  const qrCode = qrCodeModule.default;
   return qrCode.toDataURL(value, {
     type: 'image/png',
     errorCorrectionLevel: 'M',

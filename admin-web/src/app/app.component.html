@@ -46,7 +46,7 @@
         <button type="button" [class.active]="!isRegistration()" [attr.aria-pressed]="!isRegistration()" [disabled]="busy()" (click)="changeMode('login')">Вход</button>
         <button type="button" [class.active]="isRegistration()" [attr.aria-pressed]="isRegistration()" [disabled]="busy()" (click)="changeMode('register')">Регистрация</button>
       </div>
-      <form (submit)="submit($event)" [attr.aria-busy]="busy()">
+      <form method="post" (submit)="submit($event)" [attr.aria-busy]="busy()">
         <fieldset [disabled]="busy()">
           <label for="email">Email</label>
           <input id="email" name="email" type="email" autocomplete="username" placeholder="name@company.ru" required maxlength="254" [value]="email()" (input)="email.set($any($event.target).value)">
